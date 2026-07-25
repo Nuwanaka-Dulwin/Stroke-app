@@ -8,7 +8,7 @@ st.set_page_config(page_title="Stroke Risk Predictor", page_icon="🩺", layout=
 st.title("🩺 Stroke Risk Prediction System")
 st.write("Patient details ඇතුළත් කර Stroke Risk එක ගණනය කරගන්න.")
 
-# Streamlit Cloud එකේ Path එක හරියටම අල්ලාගැනීම
+# Streamlit Cloud එකේ Path එක නිවැරදිව ලබාගැනීම
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 @st.cache_resource
@@ -20,7 +20,7 @@ def load_assets():
     scaler = joblib.load(scaler_path)
     return model, scaler
 
-# File Load කරන කොටස විතරක් Try block එකට දැමීම
+# Assets load කිරීම
 try:
     model, scaler = load_assets()
 except Exception as e:
@@ -46,29 +46,41 @@ with col2:
 
 if st.button("🔍 Predict Stroke Risk", use_container_width=True):
     try:
+        # Model එකට අගයයන් සකස් කිරීම ('id' එක එකතු කර ඇත)
         patient_data = {
-            'gender': gender, 'age': age, 'hypertension': hypertension,
-            'heart_disease': heart_disease, 'ever_married': ever_married,
-            'work_type': work_type, 'Residence_type': Residence_type,
-            'avg_glucose_level': avg_glucose_level, 'bmi': bmi,
+            'id': 0,
+            'gender': gender,
+            'age': age,
+            'hypertension': hypertension,
+            'heart_disease': heart_disease,
+            'ever_married': ever_married,
+            'work_type': work_type,
+            'Residence_type': Residence_type,
+            'avg_glucose_level': avg_glucose_level,
+            'bmi': bmi,
             'smoking_status': smoking_status
         }
 
         input_df = pd.DataFrame([patient_data])
         input_encoded = pd.get_dummies(input_df)
 
+        # Model එක fit කරද්දී තිබුණු exact feature names ටික
         feature_cols = [
-            'age', 'hypertension', 'heart_disease', 'avg_glucose_level', 'bmi',
-            'gender_Male', 'gender_Other', 'ever_married_Yes',
-            'work_type_Never_worked', 'work_type_Private', 'work_type_Self-employed', 'work_type_children',
-            'Residence_type_Urban', 'smoking_status_formerly smoked', 'smoking_status_never smoked', 'smoking_status_smokes'
+            'id', 'age', 'hypertension', 'heart_disease', 'avg_glucose_level', 'bmi',
+            'gender_Male', 'ever_married_Yes',
+            'work_type_Govt_job', 'work_type_Private', 'work_type_Self-employed',
+            'Residence_type_Urban', 
+            'smoking_status_formerly smoked', 'smoking_status_never smoked', 'smoking_status_smokes'
         ]
 
+        # Missing columns වලට 0 දමා Align කිරීම
         input_encoded = input_encoded.reindex(columns=feature_cols, fill_value=0)
+        
+        # Scaling කිරීම සහ Prediction ලබාගැනීම
         input_scaled = scaler.transform(input_encoded)
-
         probability = model.predict_proba(input_scaled)[0][1] * 100
 
+        # Results පෙන්වීම
         st.divider()
         st.subheader("📊 Assessment Result")
         st.progress(int(probability))
